@@ -1,0 +1,72 @@
+#!/bin/sh
+# Pre-commit hook: verifica lint, tests, security y build antes de cada commit.
+# Activar con: git config core.hooksPath .githooks
+
+set -e
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+echo "${YELLOW}==> Pre-commit checks starting...${NC}"
+
+# Backend checks
+if git diff --cached --name-only | grep -q "^backend/"; then
+    echo "${YELLOW}==> Backend files changed, running Go checks...${NC}"
+
+    echo "  -> Running golangci-lint..."
+    cd backend && golangci-lint run ./... || {
+        echo "${RED}FAIL: golangci-lint found issues. Fix them before committing.${NC}"
+        exit 1
+    }
+
+    echo "  -> Running Go tests..."
+    go test ./... -race || {
+        echo "${RED}FAIL: Go tests failed. Fix them before committing.${NC}"
+        exit 1
+    }
+
+    echo "  -> Verifying Go build..."
+    go build ./... || {
+        echo "${RED}FAIL: Go build failed.${NC}"
+        exit 1
+    }
+
+    cd ..
+    echo "${GREEN}  Backend checks passed.${NC}"
+fi
+
+# Frontend checks
+if git diff --cached --name-only | grep -q "^frontend/"; then
+    echo "${YELLOW}==> Frontend files changed, running TypeScript checks...${NC}"
+
+    echo "  -> Running ESLint..."
+    cd frontend && npm run lint || {
+        echo "${RED}FAIL: ESLint found issues. Fix them before committing.${NC}"
+        exit 1
+    }
+
+    echo "  -> Checking Prettier format..."
+    npm run format:check || {
+        echo "${RED}FAIL: Prettier format check failed. Run 'npm run format' to fix.${NC}"
+        exit 1
+    }
+
+    echo "  -> Running frontend tests..."
+    npm test -- --passWithNoTests || {
+        echo "${RED}FAIL: Frontend tests failed. Fix them before committing.${NC}"
+        exit 1
+    }
+
+    echo "  -> Verifying frontend build..."
+    npm run build || {
+        echo "${RED}FAIL: Frontend build failed.${NC}"
+        exit 1
+    }
+
+    cd ..
+    echo "${GREEN}  Frontend checks passed.${NC}"
+fi
+
+echo "${GREEN}==> All pre-commit checks passed.${NC}"

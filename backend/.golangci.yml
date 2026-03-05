@@ -1,0 +1,48 @@
+run:
+  timeout: 5m
+  go: "1.22"
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - gosec
+    - gocritic
+    - revive
+    - ineffassign
+    - unused
+    - gosimple
+    - typecheck
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: false
+  gosec:
+    excludes:
+      - G104  # Allow unhandled errors on response writes (http.ResponseWriter)
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+      - name: blank-imports
+        severity: warning
+      - name: unused-parameter
+        severity: warning
+
+issues:
+  exclude-rules:
+    # Allow _ = in test files
+    - path: _test\.go
+      linters:
+        - errcheck
+    # Allow fmt.Sprintf in tests
+    - path: _test\.go
+      linters:
+        - gosec
