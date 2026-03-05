@@ -1,4 +1,4 @@
-.PHONY: check lint test security build format
+.PHONY: check lint test security build format docker-up docker-down docker-build docker-logs
 
 # Run all checks (use before every commit)
 check: lint test security build
@@ -58,3 +58,16 @@ setup:
 	@echo "==> Verifying Go tools..."
 	@which golangci-lint > /dev/null 2>&1 || echo "WARNING: golangci-lint not found. Install: https://golangci-lint.run/welcome/install/"
 	@echo "Setup complete"
+
+# Docker
+docker-up:
+	docker-compose up --build
+
+docker-down:
+	docker-compose down
+
+docker-build:
+	docker-compose build
+
+docker-logs:
+	docker-compose logs -f
