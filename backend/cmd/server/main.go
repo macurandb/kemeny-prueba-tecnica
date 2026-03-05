@@ -12,6 +12,7 @@ import (
 
 	"github.com/KemenyStudio/task-manager/internal/db"
 	"github.com/KemenyStudio/task-manager/internal/handler"
+	"github.com/KemenyStudio/task-manager/internal/llm"
 	"github.com/KemenyStudio/task-manager/internal/middleware"
 )
 
@@ -50,6 +51,10 @@ func main() {
 	// Public routes
 	r.Post("/api/auth/login", handler.LoginHandler)
 
+	// Create LLM client and classify handler
+	llmClient := llm.NewClient()
+	classifyHandler := handler.NewClassifyHandler(llmClient, db.Pool)
+
 	// Protected routes
 	r.Route("/api", func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware)
@@ -63,6 +68,7 @@ func main() {
 
 		// Task extras
 		r.Get("/tasks/{id}/history", handler.GetTaskHistory)
+		r.Post("/tasks/{id}/classify", classifyHandler.Handle)
 		r.Get("/tasks/search", handler.SearchTasks)
 
 		// Dashboard
