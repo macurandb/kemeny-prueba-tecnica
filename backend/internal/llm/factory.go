@@ -43,7 +43,7 @@ func NewClient() LLMClient {
 			log.Printf("Failed to create Ollama client: %v — falling back to mock", err)
 			return NewMockClient()
 		}
-		log.Printf("LLM provider: ollama (model: %s)", getEnvOrDefault("LLM_MODEL", "llama3.2"))
+		log.Printf("LLM provider: ollama (model: %s)", getEnvOrDefault("LLM_MODEL", "llama3.2:3b"))
 		return client
 
 	default:
@@ -85,7 +85,7 @@ func newAnthropicClient() (*LangChainClient, error) {
 }
 
 func newOllamaClient() (*LangChainClient, error) {
-	model := getEnvOrDefault("LLM_MODEL", "llama3.2")
+	model := getEnvOrDefault("LLM_MODEL", "llama3.2:3b")
 	serverURL := getEnvOrDefault("OLLAMA_SERVER_URL", "http://localhost:11434")
 
 	llm, err := ollama.New(
