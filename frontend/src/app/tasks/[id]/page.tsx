@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -26,6 +26,8 @@ export default function TaskDetailPage() {
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+  const [classifying, setClassifying] = useState(false);
 
   useEffect(() => {
     if (taskId) {
@@ -45,13 +47,28 @@ export default function TaskDetailPage() {
     }
   }
 
+  async function handleClassify() {
+    if (!task) return;
+    setUpdateError(null);
+    setClassifying(true);
+    try {
+      const updated = await api.classifyTask(task.id);
+      setTask(updated);
+    } catch (err) {
+      setUpdateError(err instanceof Error ? err.message : 'Failed to classify task');
+    } finally {
+      setClassifying(false);
+    }
+  }
+
   async function handleStatusChange(newStatus: string) {
     if (!task) return;
+    setUpdateError(null);
     try {
       const updated = await api.updateTask(task.id, { status: newStatus });
       setTask(updated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update task');
+      setUpdateError(err instanceof Error ? err.message : 'Failed to update task');
     }
   }
 
@@ -73,34 +90,40 @@ export default function TaskDetailPage() {
         ← Back to tasks
       </a>
 
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '0.5rem',
-        padding: '2rem',
-        marginTop: '1rem',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      }}>
+      <div
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '0.5rem',
+          padding: '2rem',
+          marginTop: '1rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        }}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <h1 style={{ margin: '0 0 1rem 0', fontSize: '1.5rem' }}>{task.title}</h1>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <span style={{
-              padding: '0.25rem 0.75rem',
-              borderRadius: '9999px',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              backgroundColor: `${priorityColors[task.priority]}20`,
-              color: priorityColors[task.priority],
-            }}>
+            <span
+              style={{
+                padding: '0.25rem 0.75rem',
+                borderRadius: '9999px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                backgroundColor: `${priorityColors[task.priority]}20`,
+                color: priorityColors[task.priority],
+              }}
+            >
               {task.priority}
             </span>
-            <span style={{
-              padding: '0.25rem 0.75rem',
-              borderRadius: '9999px',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              backgroundColor: `${statusColors[task.status]}20`,
-              color: statusColors[task.status],
-            }}>
+            <span
+              style={{
+                padding: '0.25rem 0.75rem',
+                borderRadius: '9999px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                backgroundColor: `${statusColors[task.status]}20`,
+                color: statusColors[task.status],
+              }}
+            >
               {task.status.replace('_', ' ')}
             </span>
           </div>
@@ -108,7 +131,9 @@ export default function TaskDetailPage() {
 
         {task.description && (
           <div style={{ marginBottom: '1.5rem' }}>
-            <h3 style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>Description</h3>
+            <h3 style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+              Description
+            </h3>
             <p style={{ margin: 0, lineHeight: 1.6, color: '#374151' }}>{task.description}</p>
           </div>
         )}
@@ -136,22 +161,51 @@ export default function TaskDetailPage() {
           </div>
         )}
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: '1rem',
-          marginBottom: '1.5rem',
-          padding: '1rem',
-          backgroundColor: '#f9fafb',
-          borderRadius: '0.375rem',
-        }}>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <button
+            onClick={handleClassify}
+            disabled={classifying}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '0.375rem',
+              border: '1px solid #8b5cf6',
+              backgroundColor: classifying ? '#e5e7eb' : '#8b5cf620',
+              color: classifying ? '#6b7280' : '#8b5cf6',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: classifying ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {classifying
+              ? 'Classifying...'
+              : task.category && task.summary
+                ? 'Re-classify with AI'
+                : 'Classify with AI'}
+          </button>
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '1rem',
+            marginBottom: '1.5rem',
+            padding: '1rem',
+            backgroundColor: '#f9fafb',
+            borderRadius: '0.375rem',
+          }}
+        >
           <div>
             <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Creator</span>
-            <p style={{ margin: '0.25rem 0 0', fontWeight: 500 }}>{task.creator?.name || 'Unknown'}</p>
+            <p style={{ margin: '0.25rem 0 0', fontWeight: 500 }}>
+              {task.creator?.name || 'Unknown'}
+            </p>
           </div>
           <div>
             <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Assignee</span>
-            <p style={{ margin: '0.25rem 0 0', fontWeight: 500 }}>{task.assignee?.name || 'Unassigned'}</p>
+            <p style={{ margin: '0.25rem 0 0', fontWeight: 500 }}>
+              {task.assignee?.name || 'Unassigned'}
+            </p>
           </div>
           <div>
             <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Due Date</span>
@@ -161,14 +215,45 @@ export default function TaskDetailPage() {
           </div>
           <div>
             <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Estimated Hours</span>
-            <p style={{ margin: '0.25rem 0 0', fontWeight: 500 }}>
-              {task.estimated_hours || '—'}
-            </p>
+            <p style={{ margin: '0.25rem 0 0', fontWeight: 500 }}>{task.estimated_hours || '—'}</p>
           </div>
         </div>
 
+        {updateError && (
+          <div
+            style={{
+              padding: '0.75rem 1rem',
+              marginBottom: '1rem',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fca5a5',
+              borderRadius: '0.375rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ color: '#dc2626', fontSize: '0.875rem' }}>{updateError}</span>
+            <button
+              onClick={() => setUpdateError(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#dc2626',
+                cursor: 'pointer',
+                fontSize: '1.25rem',
+                lineHeight: 1,
+                padding: '0 0.25rem',
+              }}
+            >
+              x
+            </button>
+          </div>
+        )}
+
         <div>
-          <h3 style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>Change Status</h3>
+          <h3 style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+            Change Status
+          </h3>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {['todo', 'in_progress', 'review', 'done'].map((status) => (
               <button
@@ -193,8 +278,22 @@ export default function TaskDetailPage() {
         </div>
 
         {task.summary && (
-          <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '0.375rem' }}>
-            <h3 style={{ fontSize: '0.875rem', color: '#1d4ed8', marginBottom: '0.25rem', marginTop: 0 }}>
+          <div
+            style={{
+              marginTop: '1.5rem',
+              padding: '1rem',
+              backgroundColor: '#eff6ff',
+              borderRadius: '0.375rem',
+            }}
+          >
+            <h3
+              style={{
+                fontSize: '0.875rem',
+                color: '#1d4ed8',
+                marginBottom: '0.25rem',
+                marginTop: 0,
+              }}
+            >
               AI Summary
             </h3>
             <p style={{ margin: 0, color: '#1e40af', fontSize: '0.875rem' }}>{task.summary}</p>

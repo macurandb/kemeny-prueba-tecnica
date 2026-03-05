@@ -20,6 +20,13 @@ class ApiClient {
     return this.token;
   }
 
+  logout() {
+    this.token = null;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+    }
+  }
+
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const token = this.getToken();
     const headers: Record<string, string> = {
@@ -37,6 +44,10 @@ class ApiClient {
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        this.logout();
+        throw new Error('Session expired. Please log in again.');
+      }
       const error = await response.json().catch(() => ({ error: 'Unknown error' }));
       throw new Error(error.error || `HTTP ${response.status}`);
     }
@@ -88,6 +99,12 @@ class ApiClient {
   async deleteTask(id: string): Promise<void> {
     await this.request<void>(`/api/tasks/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  async classifyTask(id: string): Promise<Task> {
+    return this.request<Task>(`/api/tasks/${id}/classify`, {
+      method: 'POST',
     });
   }
 
