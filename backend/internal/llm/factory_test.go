@@ -33,6 +33,12 @@ func TestNewClient(t *testing.T) {
 			wantReason: "openai without API key should fall back to mock",
 		},
 		{
+			name:       "falls back to mock when anthropic key is missing",
+			envVars:    map[string]string{"LLM_PROVIDER": "anthropic", "ANTHROPIC_API_KEY": ""},
+			wantMock:   true,
+			wantReason: "anthropic without API key should fall back to mock",
+		},
+		{
 			name:       "falls back to mock for unknown provider",
 			envVars:    map[string]string{"LLM_PROVIDER": "unknown-provider"},
 			wantMock:   true,

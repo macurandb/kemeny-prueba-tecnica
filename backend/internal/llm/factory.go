@@ -5,12 +5,13 @@ import (
 	"log"
 	"os"
 
+	"github.com/tmc/langchaingo/llms/anthropic"
 	"github.com/tmc/langchaingo/llms/ollama"
 	"github.com/tmc/langchaingo/llms/openai"
 )
 
 // NewClient creates an LLMClient based on the LLM_PROVIDER environment variable.
-// Supported providers: "openai", "ollama", "mock" (default).
+// Supported providers: "openai", "anthropic", "ollama", "mock" (default).
 func NewClient() LLMClient {
 	provider := os.Getenv("LLM_PROVIDER")
 	if provider == "" {
@@ -25,6 +26,15 @@ func NewClient() LLMClient {
 			return NewMockClient()
 		}
 		log.Printf("LLM provider: openai (model: %s)", getEnvOrDefault("LLM_MODEL", "gpt-4o-mini"))
+		return client
+
+	case "anthropic":
+		client, err := newAnthropicClient()
+		if err != nil {
+			log.Printf("Failed to create Anthropic client: %v — falling back to mock", err)
+			return NewMockClient()
+		}
+		log.Printf("LLM provider: anthropic (model: %s)", getEnvOrDefault("LLM_MODEL", "claude-sonnet-4-20250514"))
 		return client
 
 	case "ollama":
@@ -53,6 +63,22 @@ func newOpenAIClient() (*LangChainClient, error) {
 	llm, err := openai.New(openai.WithModel(model))
 	if err != nil {
 		return nil, fmt.Errorf("openai.New: %w", err)
+	}
+
+	return NewLangChainClient(llm), nil
+}
+
+func newAnthropicClient() (*LangChainClient, error) {
+	apiKey := os.Getenv("ANTHROPIC_API_KEY")
+	if apiKey == "" {
+		return nil, fmt.Errorf("ANTHROPIC_API_KEY is required for anthropic provider")
+	}
+
+	model := getEnvOrDefault("LLM_MODEL", "claude-sonnet-4-20250514")
+
+	llm, err := anthropic.New(anthropic.WithModel(model), anthropic.WithToken(apiKey))
+	if err != nil {
+		return nil, fmt.Errorf("anthropic.New: %w", err)
 	}
 
 	return NewLangChainClient(llm), nil

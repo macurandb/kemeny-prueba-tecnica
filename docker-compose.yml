@@ -23,6 +23,10 @@ services:
       DB_NAME: taskmanager
       JWT_SECRET: dev-secret
       LLM_PROVIDER: mock
+      # LLM_PROVIDER: openai
+      # LLM_PROVIDER: anthropic
+      # OPENAI_API_KEY: ""
+      # ANTHROPIC_API_KEY: ""
       CORS_ORIGIN: http://localhost
     depends_on:
       db:
