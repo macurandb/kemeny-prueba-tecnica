@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -289,6 +288,9 @@ func UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Capture old values before mutation for edit history
+	oldStatus := existing.Status
+
 	// Build update fields
 	if req.Title != nil {
 		existing.Title = *req.Title
@@ -322,7 +324,7 @@ func UpdateTask(w http.ResponseWriter, r *http.Request) {
 		existing.ActualHours = req.ActualHours
 	}
 
-	_, _ = db.Pool.Exec(r.Context(),
+	result, err := db.Pool.Exec(r.Context(),
 		`UPDATE tasks SET title=$1, description=$2, status=$3, priority=$4,
 		 assignee_id=$5, estimated_hours=$6, actual_hours=$7, updated_at=NOW()
 		 WHERE id=$8`,
@@ -330,15 +332,26 @@ func UpdateTask(w http.ResponseWriter, r *http.Request) {
 		existing.AssigneeID, existing.EstimatedHours, existing.ActualHours,
 		taskID,
 	)
+	if err != nil {
+		log.Printf("error updating task %s: %v", taskID, err)
+		http.Error(w, `{"error": "failed to update task"}`, http.StatusInternalServerError)
+		return
+	}
+	if result.RowsAffected() == 0 {
+		http.Error(w, `{"error": "task not found"}`, http.StatusNotFound)
+		return
+	}
 
 	// Record edit history
 	userID := middleware.GetUserID(r)
-	if req.Status != nil {
-		_, _ = db.Pool.Exec(r.Context(),
+	if req.Status != nil && *req.Status != oldStatus {
+		if _, err := db.Pool.Exec(r.Context(),
 			`INSERT INTO edit_history (task_id, user_id, field_name, old_value, new_value)
 			 VALUES ($1, $2, 'status', $3, $4)`,
-			taskID, userID, existing.Status, *req.Status,
-		)
+			taskID, userID, oldStatus, *req.Status,
+		); err != nil {
+			log.Printf("error recording edit history for task %s: %v", taskID, err)
+		}
 	}
 
 	// Return updated task
@@ -543,7 +556,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		"user_id": user.ID,
 		"email":   user.Email,
 		"role":    user.Role,
-		"exp":     fmt.Sprintf("%d", time.Now().Add(24*time.Hour).Unix()),
+		"exp":     time.Now().Add(24 * time.Hour).Unix(),
 	})
 
 	tokenString, err := token.SignedString(jwtSecret)
