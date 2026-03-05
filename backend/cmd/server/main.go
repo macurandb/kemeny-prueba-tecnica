@@ -16,6 +16,13 @@ import (
 	"github.com/KemenyStudio/task-manager/internal/middleware"
 )
 
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}
+
 // NOTE: No graceful shutdown implemented.
 // The server will terminate abruptly on SIGINT/SIGTERM,
 // potentially leaving in-flight requests incomplete.
@@ -35,7 +42,7 @@ func main() {
 
 	// CORS
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedOrigins:   []string{getEnv("CORS_ORIGIN", "http://localhost:3000")},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
